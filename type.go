@@ -5,11 +5,6 @@ import (
 	"time"
 )
 
-type CreateAccountRequest struct {
-	FirstName string `json:"firstName"`
-	LastName  string `json:"lastName"`
-}
-
 type Account struct {
 	Id        int       `json:"id"`
 	Firstname string    `json:"firstname"`
@@ -25,6 +20,27 @@ func NewAccount(firstname, lastname string) *Account {
 		Lastname:  lastname,
 		Number:    int64(rand.Intn(100000)),
 		CreatedAt: utcToGMT8(),
+	}
+}
+
+type CreateAccountRequest struct {
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+}
+
+type UpdateAccountRequest struct {
+	Balance int64 `json:"balance"`
+}
+
+type TrasferRequest struct {
+	ToAccount int `json:"toAccount"`
+	Amount    int `json:"amount"`
+}
+
+func UpdateAccount(id int, balance int64) *Account {
+	return &Account{
+		Id:      id,
+		Balance: balance,
 	}
 }
 
