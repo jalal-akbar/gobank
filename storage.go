@@ -12,6 +12,7 @@ type Storage interface {
 	UpdateAccount(*Account) error
 	DeleteAccount(id int) error
 	GetAccountByID(id int) (*Account, error)
+	GetAccountByNumber(number int) (*Account, error)
 	GetAccounts() ([]*Account, error)
 }
 
@@ -42,9 +43,10 @@ func (s *PostgresStore) Init() error {
 func (s *PostgresStore) createAccountTable() error {
 	query := `CREATE TABLE IF NOT EXISTS account(
 		id serial primary key,
-		first_name varchar(50),
-		last_name varchar(50),
+		first_name varchar(100),
+		last_name varchar(100),
 		number serial,
+		encrypted_password varchar(100),
 		balance serial,
 		created_at timestamp
 	)`
@@ -55,20 +57,19 @@ func (s *PostgresStore) createAccountTable() error {
 
 func (s *PostgresStore) CreateAccount(acc *Account) error {
 	query := `INSERT INTO account
-	(first_name, last_name, number, balance, created_at) 
+	(first_name, last_name, number,encrypted_password, balance, created_at) 
 	VALUES
-	($1, $2, $3, $4, $5)`
-	resp, err := s.db.Query(query,
+	($1, $2, $3, $4, $5, $6)`
+	_, err := s.db.Query(query,
 		acc.Firstname,
 		acc.Lastname,
 		acc.Number,
+		acc.EncryptedPassword,
 		acc.Balance,
 		acc.CreatedAt)
 	if err != nil {
 		return err
 	}
-
-	fmt.Printf("%+v\n", resp)
 
 	return nil
 }
@@ -93,6 +94,21 @@ func (s *PostgresStore) DeleteAccount(id int) error {
 	}
 
 	return nil
+}
+
+func (s *PostgresStore) GetAccountByNumber(number int) (a *Account, err error) {
+	query := "SELECT * FROM account WHERE number = $1"
+	rows, err := s.db.Query(query, number)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		return scanIntoRows(rows)
+	}
+
+	return nil, fmt.Errorf("account with number [%d] not found", number)
 }
 
 func (s *PostgresStore) GetAccountByID(id int) (a *Account, err error) {
@@ -137,7 +153,7 @@ func (s *PostgresStore) GetAccounts() ([]*Account, error) {
 
 func scanIntoRows(rows *sql.Rows) (*Account, error) {
 	acc := new(Account)
-	if err := rows.Scan(&acc.Id, &acc.Firstname, &acc.Lastname, &acc.Number, &acc.Balance, &acc.CreatedAt); err != nil {
+	if err := rows.Scan(&acc.Id, &acc.Firstname, &acc.Lastname, &acc.Number, &acc.EncryptedPassword, &acc.Balance, &acc.CreatedAt); err != nil {
 		return nil, err
 	}
 	return acc, nil
